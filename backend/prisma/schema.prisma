@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TransactionType {
+  MONEY_LOAN
+  STORE_ITEMS
+}
+
+enum TransactionEntryMode {
+  ITEMIZED
+  TOTAL_ONLY
+}
+
+enum TransactionStatus {
+  ACTIVE
+  VOIDED
+  REVERSED
+}
+
+enum PaymentStatus {
+  POSTED
+  VOIDED
+  REVERSED
+}
+
+enum UserRole {
+  OWNER
+  EMPLOYEE
+}
+
+model User {
+  id                 String              @id @default(uuid()) @db.Uuid
+  name               String
+  username           String              @unique
+  passwordHash       String              @map("password_hash")
+  role               UserRole            @default(OWNER)
+  transactions       Transaction[]
+  payments           Payment[]
+  auditLogs          AuditLog[]
+  idempotencyRecords IdempotencyRecord[]
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("users")
+}
+
+model Customer {
+  id            String        @id @default(uuid()) @db.Uuid
+  name          String
+  contactNumber String?       @map("contact_number")
+  notes         String?
+  archivedAt    DateTime?     @map("archived_at") @db.Timestamptz(6)
+  transactions  Transaction[]
+  payments      Payment[]
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([name])
+  @@map("customers")
+}
+
+model Transaction {
+  id          String                @id @default(uuid()) @db.Uuid
+  customerId  String                @map("customer_id") @db.Uuid
+  userId      String                @map("user_id") @db.Uuid
+  type        TransactionType
+  entryMode   TransactionEntryMode? @map("entry_mode")
+  totalAmount Decimal               @map("total_amount") @db.Decimal(18, 2)
+  status      TransactionStatus     @default(ACTIVE)
+  description String?
+  occurredAt  DateTime              @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  customer    Customer              @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items       TransactionItem[]
+  allocations PaymentAllocation[]
+  createdAt   DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([customerId, type, occurredAt])
+  @@map("transactions")
+}
+
+model TransactionItem {
+  id            String      @id @default(uuid()) @db.Uuid
+  transactionId String      @map("transaction_id") @db.Uuid
+  itemName      String      @map("item_name")
+  quantity      Decimal     @db.Decimal(18, 3)
+  unitPrice     Decimal     @map("unit_price") @db.Decimal(18, 2)
+  subtotal      Decimal     @db.Decimal(18, 2)
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([transactionId])
+  @@map("transaction_items")
+}
+
+model Payment {
+  id            String              @id @default(uuid()) @db.Uuid
+  customerId    String              @map("customer_id") @db.Uuid
+  userId        String              @map("user_id") @db.Uuid
+  amount        Decimal             @db.Decimal(18, 2)
+  paymentMethod String?             @map("payment_method")
+  notes         String?
+  status        PaymentStatus       @default(POSTED)
+  paidAt        DateTime            @default(now()) @map("paid_at") @db.Timestamptz(6)
+  customer      Customer            @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  user          User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  allocations   PaymentAllocation[]
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([customerId, paidAt])
+  @@map("payments")
+}
+
+model PaymentAllocation {
+  id              String      @id @default(uuid()) @db.Uuid
+  paymentId       String      @map("payment_id") @db.Uuid
+  transactionId   String      @map("transaction_id") @db.Uuid
+  allocatedAmount Decimal     @map("allocated_amount") @db.Decimal(18, 2)
+  payment         Payment     @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([paymentId, transactionId])
+  @@index([transactionId])
+  @@map("payment_allocations")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id") @db.Uuid
+  oldValues  Json?    @map("old_values")
+  newValues  Json?    @map("new_values")
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+model IdempotencyRecord {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  key            String   @db.VarChar(255)
+  method         String   @db.VarChar(10)
+  path           String
+  requestHash    String   @map("request_hash") @db.VarChar(64)
+  responseStatus Int?     @map("response_status")
+  responseBody   Json?    @map("response_body")
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz(6)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([userId, key])
+  @@index([expiresAt])
+  @@map("idempotency_records")
+}
