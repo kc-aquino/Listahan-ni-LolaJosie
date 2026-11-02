@@ -8,14 +8,14 @@ export function QuickActions() {
   return (
     <section aria-labelledby="quick-actions-title" className="space-y-4">
       <div>
-        <p className="section-kicker text-xs font-bold tracking-[0.16em]">
+        <p className="section-kicker">
           {translate('quickActionsEyebrow')}
         </p>
-        <h2 className="mt-2 text-2xl font-bold">
+        <h2 className="mt-2 text-2xl font-bold" id="quick-actions-title">
           {translate('quickActionsTitle')}
         </h2>
       </div>
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         <Link className="quick-action quick-action--debt btn btn-lg text-left text-lg" to="/debts/new">
           <span className="action-icon">
             <Icon className="size-6" name="plus" />

@@ -193,7 +193,7 @@ export function HistoryPage() {
                 <div className="flex items-start gap-3">
                   <span
                     aria-hidden="true"
-                    className={`grid size-12 shrink-0 place-items-center rounded-full text-xl font-bold ${entry.isPayment ? 'bg-accent/15 text-accent' : 'bg-secondary/15 text-secondary'}`}
+                    className={`grid size-12 shrink-0 place-items-center rounded-full text-xl font-bold ${entry.isPayment ? 'bg-accent/15 text-accent' : 'bg-secondary/15 text-primary'}`}
                   >
                     {entry.isPayment ? '₱' : '−'}
                   </span>

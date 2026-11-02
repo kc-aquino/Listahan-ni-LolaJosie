@@ -9,45 +9,47 @@ export function AppHeader() {
   const { logout } = useAuth()
   const languages: { code: Language; label: string }[] = [
     { code: 'en', label: 'English' },
-    { code: 'tl', label: 'Tagalog' },
+    { code: 'tl', label: 'Taglish' },
   ]
 
   return (
     <header className="lola-navbar navbar sticky top-0 z-10 min-h-16 px-3 backdrop-blur sm:px-5 lg:px-8">
-      <div className="mx-auto flex w-full max-w-6xl items-center gap-1 sm:gap-2">
+      <div className="app-header-content mx-auto grid w-full max-w-6xl items-center gap-1 sm:gap-2">
         <Link aria-label={translate('homeAria')} className="btn btn-ghost h-12 min-h-12 shrink-0 gap-2 px-1 text-base font-bold sm:px-2 sm:text-xl" to="/">
           <span aria-hidden="true" className="brand-mark badge size-9 shrink-0 font-serif text-lg text-white sm:size-10">
             L
           </span>
-          <span className="whitespace-nowrap">Lista <span className="text-primary">ni Lola</span></span>
+          <span className="whitespace-nowrap">Listahan <span className="text-primary">ni Lola</span></span>
         </Link>
-        <nav aria-label={translate('mainNavigation')} className="ml-auto hidden lg:block">
+        <nav aria-label={translate('mainNavigation')} className="app-desktop-nav hidden lg:block">
           <BottomNavigation />
         </nav>
-        <button
-          aria-label={translate('signOut')}
-          className="btn btn-ghost touch-target ml-auto px-2 lg:ml-4"
-          onClick={logout}
-          title={translate('signOut')}
-          type="button"
-        >
-          <Icon className="size-5" name="logout" />
-          <span className="hidden sm:inline">{translate('signOut')}</span>
-        </button>
-        <div aria-label={translate('language')} className="language-switch join ml-1" role="group">
-          {languages.map(({ code, label }) => (
-            <button
-              aria-label={label}
-              aria-pressed={language === code}
-              className={`btn join-item ${language === code ? 'btn-primary' : ''}`}
-              key={code}
-              onClick={() => setLanguage(code)}
-              type="button"
-            >
-              <span className="hidden sm:inline">{label}</span>
-              <span aria-hidden="true" className="sm:hidden">{code.toUpperCase()}</span>
-            </button>
-          ))}
+        <div className="app-header-actions">
+          <button
+            aria-label={translate('signOut')}
+            className="btn btn-ghost touch-target px-2"
+            onClick={logout}
+            title={translate('signOut')}
+            type="button"
+          >
+            <Icon className="size-5" name="logout" />
+            <span className="hidden sm:inline">{translate('signOut')}</span>
+          </button>
+          <div aria-label={translate('language')} className="language-switch join" role="group">
+            {languages.map(({ code, label }) => (
+              <button
+                aria-label={label}
+                aria-pressed={language === code}
+                className={`btn join-item ${language === code ? 'btn-primary' : ''}`}
+                key={code}
+                onClick={() => setLanguage(code)}
+                type="button"
+              >
+                <span className="hidden sm:inline">{label}</span>
+                <span aria-hidden="true" className="sm:hidden">{code.toUpperCase()}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </header>

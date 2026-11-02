@@ -120,6 +120,8 @@ export class ApiError extends Error {
   }
 }
 
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL?.trim() || '/api').replace(/\/+$/, '')
+
 async function request<T>(
   path: string,
   options: RequestInit & { authenticated?: boolean } = {},
@@ -134,7 +136,7 @@ async function request<T>(
     headers.set('Authorization', `Bearer ${token}`)
   }
 
-  const response = await fetch(`/api${path}`, { ...init, headers })
+  const response = await fetch(`${apiBaseUrl}${path}`, { ...init, headers })
 
   if (!response.ok) {
     if (response.status === 401 && authenticated) {

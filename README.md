@@ -1,4 +1,4 @@
-# Lista ni Lola
+# Listahan ni Lola
 
 A mobile-first sari-sari store debt-management app designed around Lola Josie's daily workflow. Money Utang and Store Items Utang stay separate, with customer profiles and payments designed to retain a clear history.
 
@@ -33,11 +33,11 @@ The initial foundation includes the React app shell, responsive navigation and w
 
 ## Current workflows
 
-The app now includes owner sign-in, customer search/create/profile, archive/restore with retained history, separate debt entry forms, explicit split-payment allocation, transaction/payment history, reversals, and daily/monthly reports. Archived customers are hidden by default but can be included for lookup or payment settlement. Backend unit tests cover decimal balances, payment allocation, audit entries, idempotent writes, archive/restore audit events, and historical report snapshots. These workflows require the PostgreSQL migration and a seeded owner account before they can be used end to end.
+The app now includes owner sign-in, customer search/create/profile, archive/restore with retained history, separate debt entry forms, explicit split-payment allocation, transaction/payment history, reversals, and daily/monthly reports. The dashboard uses a straightforward ledger layout with clear balances, large actions, and a consistent high-contrast palette. Archived customers are hidden by default but can be included for lookup or payment settlement. Backend unit tests cover decimal balances, payment allocation, audit entries, idempotent writes, archive/restore audit events, and historical report snapshots. These workflows require the PostgreSQL migration and a seeded owner account before they can be used end to end.
 
 ## Language and UI
 
-The English/Tagalog switch is in the top-right of the app header. The app starts in Tagalog, remembers the selected language in browser storage, and updates the page language for assistive technology. DaisyUI components and Tailwind utility classes are configured in `frontend/src/app.css`.
+The English/Taglish switch is in the top-right of the app header. The app starts in Taglish, remembers the selected language in browser storage, and updates the page language for assistive technology. DaisyUI components and Tailwind utility classes are configured in `frontend/src/app.css`.
 
 ## Run locally
 
@@ -55,7 +55,7 @@ yarn prisma:seed:owner
 yarn start:dev
 ```
 
-Before starting, edit `backend/.env` with a reachable PostgreSQL `DATABASE_URL`, a unique `JWT_SECRET` of at least 32 characters, and private owner account values (`OWNER_NAME`, `OWNER_USERNAME`, `OWNER_PASSWORD`). Generate a JWT secret locally with:
+Before starting, edit `backend/.env` with a PostgreSQL `DATABASE_URL`, a direct (unpooled) `DATABASE_URL_UNPOOLED` for Prisma migrations, a unique `JWT_SECRET` of at least 32 characters, and private owner account values (`OWNER_NAME`, `OWNER_USERNAME`, `OWNER_PASSWORD`). For Neon, use its pooled connection string for `DATABASE_URL` and its direct connection string for `DATABASE_URL_UNPOOLED`. Generate a JWT secret locally with:
 
 ```powershell
 node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"
@@ -78,3 +78,4 @@ The Vite development server proxies `/api` requests to the backend on port 3000.
 - [Requirements](./docs/requirements.md)
 - [Database design](./docs/database-design.md)
 - [Development roadmap](./docs/development-roadmap.md)
+- [Deployment preparation](./docs/deployment.md)

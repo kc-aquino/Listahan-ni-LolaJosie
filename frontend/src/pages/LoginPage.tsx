@@ -34,7 +34,7 @@ export function LoginPage() {
         : null
 
   return (
-    <main className="app-background grid min-h-screen place-items-center px-4 py-8">
+    <main className="app-background grid min-h-screen place-items-center px-4 py-8" data-theme="lola">
       <section
         aria-labelledby="login-title"
         className="card w-full max-w-lg border-2 border-base-300 bg-base-100 shadow-xl"
@@ -45,12 +45,12 @@ export function LoginPage() {
               L
             </span>
             <p className="text-xl font-bold">
-              Lista <span className="text-primary">ni Lola</span>
+              Listahan <span className="text-primary">ni Lola</span>
             </p>
             <div aria-label={translate('language')} className="language-switch join ml-auto" role="group">
               {([
                 { code: 'en', label: 'English' },
-                { code: 'tl', label: 'Tagalog' },
+                { code: 'tl', label: 'Taglish' },
               ] as { code: Language; label: string }[]).map(({ code, label }) => (
                 <button
                   aria-label={label}

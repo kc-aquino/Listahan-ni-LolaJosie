@@ -4,10 +4,10 @@ import { WelcomePanel } from '../components/organisms/WelcomePanel'
 
 export function HomePage() {
   return (
-    <div className="home-page">
+    <div className="home-page grid gap-8">
       <WelcomePanel />
-      <QuickActions />
       <DebtCategories />
+      <QuickActions />
     </div>
   )
 }

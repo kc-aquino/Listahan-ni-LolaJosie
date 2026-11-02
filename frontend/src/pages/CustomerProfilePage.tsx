@@ -76,7 +76,7 @@ export function CustomerProfilePage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <span
               aria-hidden="true"
-              className="grid size-16 shrink-0 place-items-center rounded-full bg-secondary/15 text-3xl font-bold text-secondary"
+              className="grid size-16 shrink-0 place-items-center rounded-full bg-secondary/15 text-3xl font-bold text-primary"
             >
               {customer.data.name.trim().charAt(0).toUpperCase()}
             </span>

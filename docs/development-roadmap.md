@@ -44,11 +44,11 @@ Implementation tasks:
 8. organize backend code by feature modules and shared infrastructure
 9. verify the frontend-to-backend health check
 
-The initial Prisma schema is validated and the health endpoint is reachable through the frontend proxy. No database migration has been applied yet; applying the first migration requires a running PostgreSQL instance and a configured local `DATABASE_URL`.
+The initial Prisma schema is validated, the frontend health endpoint is reachable through the proxy, and the initial migration is applied to the configured local PostgreSQL database.
 
 ## Phase 2 — Backend development
 
-Status: API implementation and unit tests are in place. Database-backed verification is blocked until the local PostgreSQL credentials are corrected and the generated migration is applied.
+Status: API implementation, unit tests, and local PostgreSQL integration verification are complete.
 
 Key implementation order:
 
@@ -71,7 +71,7 @@ Required testing:
 - transaction reversal tests
 - audit log coverage
 
-Current verification: 26 backend unit tests pass; the Prisma schema validates. The migration is generated but has not been applied.
+Current verification: 28 backend unit tests pass; the Prisma schema validates; the migration is applied; the owner seed completes successfully; and database-backed e2e scenarios pass.
 
 ## Phase 3 — Frontend development
 
@@ -99,7 +99,7 @@ The frontend should prioritize:
 
 ## Phase 4 — Integration
 
-Status: login, customer, debt, payment, history, and report screens are connected to the API. Archive/restore actions preserve an audit trail, hide archived customers by default, and retain payment settlement and history access. Full database-backed end-to-end verification remains blocked by local database credentials.
+Status: login, customer, debt, payment, history, and report screens are connected to the API. Archive/restore actions preserve an audit trail, hide archived customers by default, and retain payment settlement and history access. End-to-end verification against the configured PostgreSQL database passes.
 
 Goals:
 
@@ -111,7 +111,7 @@ Goals:
 
 ## Phase 5 — Testing with realistic scenarios
 
-Status: 28 service-level backend tests pass, including customer archive/restore audit coverage. The complete customer/debt/payment/reversal scenario still needs a migrated, reachable database.
+Status: complete. The database-backed e2e scenario creates and cleans up an isolated customer and verifies money and itemized debt, archived-customer payment rules, split allocation, idempotent replay, balance calculations, payment/debt reversals, and retained history. Backend unit tests and the health e2e test also pass.
 
 Recommended scenario flow:
 
@@ -128,7 +128,7 @@ Recommended scenario flow:
 
 ## Phase 6 — Deployment
 
-Status: blocked pending a verified database and user-managed production hosting/secret access.
+Status: Neon production database provisioned and migrated; local API-to-Neon financial e2e verification passes. Deployment configuration for Vercel/Render is prepared. Production API/frontend deployment, secure provider credentials, backup/restore verification, and device acceptance remain prerequisites.
 
 - configure production environment variables
 - deploy frontend to Vercel
@@ -140,7 +140,7 @@ Status: blocked pending a verified database and user-managed production hosting/
 
 ## Phase 7 — Real-world improvements
 
-Status: approved but not started; begin after the core is stable and database-backed scenarios pass. This gate remains in place so offline synchronization and inventory changes do not compound unverified ledger behavior.
+Status: approved but not started; core database-backed scenarios now pass. Begin after Phase 6 production deployment and device usability checks, so real-world features are developed against the released, verified core.
 
 After the base system is stable:
 

@@ -175,11 +175,11 @@ export function DebtEntryPage() {
                   </span>
                 </span>
               </label>
-              <label className={`card cursor-pointer border-2 p-4 ${type === 'STORE_ITEMS' ? 'border-secondary bg-secondary/10' : 'border-base-300'}`}>
+              <label className={`card cursor-pointer border-2 p-4 ${type === 'STORE_ITEMS' ? 'border-primary bg-primary/10' : 'border-base-300'}`}>
                 <span className="flex items-start gap-3">
                   <input
                     checked={type === 'STORE_ITEMS'}
-                    className="radio radio-secondary mt-1"
+                    className="radio radio-primary mt-1"
                     name="debt-type"
                     onChange={() => setType('STORE_ITEMS')}
                     type="radio"

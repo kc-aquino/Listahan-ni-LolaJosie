@@ -167,7 +167,7 @@ export function CustomersPage() {
                 <div className="card-body flex-row items-center gap-4 p-5">
                   <span
                     aria-hidden="true"
-                    className="grid size-14 shrink-0 place-items-center rounded-full bg-secondary/15 text-2xl font-bold text-secondary"
+                    className="grid size-14 shrink-0 place-items-center rounded-full bg-secondary/15 text-2xl font-bold text-primary"
                   >
                     {customer.name.trim().charAt(0).toUpperCase()}
                   </span>

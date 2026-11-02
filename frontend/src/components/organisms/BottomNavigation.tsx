@@ -7,7 +7,6 @@ const navigationItems: { label: TranslationKey; to: string; icon: IconName; end?
   { label: 'customers', to: '/customers', icon: 'customers' },
   { label: 'history', to: '/history', icon: 'history' },
   { label: 'reports', to: '/reports', icon: 'reports' },
-  { label: 'settings', to: '/settings', icon: 'settings' },
 ]
 
 type BottomNavigationProps = {
