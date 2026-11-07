@@ -98,3 +98,14 @@ The backend dependencies must also be installed because this command uses its
 TypeScript runner. Import `uploadFile` from `s3-client.ts` to upload an object and
 receive a download URL valid for one hour; importing the module performs no upload.
 S3 storage configuration is separate from Prisma's PostgreSQL `DATABASE_URL`.
+
+## Install and use offline
+
+Open https://listahan-ni-lolajosie.vercel.app while online and sign in. Wait for
+"Records available offline", then use your browser's Install app option (Safari:
+Share > Add to Home Screen). Saved customers, debts, balances, and history remain
+available offline. Debts and payments for saved customers are marked pending and
+sync when the app is open/reopened with internet. Keep the device's site data to
+retain saved records and pending entries. An expired session requires online
+sign-in before synchronization resumes. New customers and corrections require
+internet. See `docs/deployment.md` for validation and reconciliation details.

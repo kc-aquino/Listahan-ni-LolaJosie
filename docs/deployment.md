@@ -131,3 +131,12 @@ Validation includes generated-manifest/icon/worker tests, IndexedDB persistence,
 ordered debt/payment sync, lost-response retry, conflict preservation, account
 isolation, over-allocation rejection, and expired-key replay tests. Actual-device
 installation and offline acceptance remain part of the release checklist.
+
+Offline PWA release deployed and promoted on November 08, 2026:
+`dpl_DbYo3BgrEV1tH1HKShaC97EGbhdn` at https://listahan-ni-lolajosie.vercel.app.
+Production checks passed for manifest metadata, all manifest icons, Apple touch
+icon markup, service-worker MIME/no-cache headers, network-only API routing,
+API health, and browser page loading. Both database-backed financial e2e tests
+passed after the delayed-idempotency change. Offline persistence/retry/conflict
+cases were exercised with IndexedDB emulation; actual phone installation and
+Wi-Fi-toggle acceptance still need to be checked on Lola's device.
