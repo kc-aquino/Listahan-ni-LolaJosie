@@ -1,3 +1,5 @@
+import { formatDate } from '../lib/date'
+import { ItemDetails } from '../components/molecules/ItemDetails'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
@@ -11,7 +13,7 @@ import {
   getCustomerTransactions,
   restoreCustomer,
 } from '../lib/api'
-import { outstandingAmount } from '../lib/money'
+import { isDebtCompleted, outstandingAmount } from '../lib/money'
 
 function peso(amount: string) {
   return `₱ ${amount}`
@@ -19,7 +21,7 @@ function peso(amount: string) {
 
 export function CustomerProfilePage() {
   const { customerId = '' } = useParams()
-  const { language, translate } = useLanguage()
+  const { translate } = useLanguage()
   const queryClient = useQueryClient()
   const [archiveConfirmationOpen, setArchiveConfirmationOpen] = useState(false)
   const customer = useQuery({
@@ -180,16 +182,11 @@ export function CustomerProfilePage() {
                         : translate('goodsDebt')}
                     </p>
                     <p className="mt-1 text-base-content/70">
-                      {new Date(entry.occurredAt).toLocaleDateString(
-                        language === 'tl' ? 'fil-PH' : 'en-PH',
-                      )}
-                      {entry.description ? ` · ${entry.description}` : ''}
+                      {formatDate(entry.occurredAt)}
+
                     </p>
-                    {entry.items.length > 0 && (
-                      <p className="mt-1 text-sm text-base-content/70">
-                        {entry.items.map((item) => item.itemName).join(', ')}
-                      </p>
-                    )}
+                    {entry.description && <p className="mt-3 text-base-content/75">{entry.description}</p>}
+                    {entry.items.length > 0 && <div className="mt-3"><ItemDetails items={entry.items} /></div>}
                   </div>
                   <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
                     <span className="text-xl font-extrabold text-primary">
@@ -200,7 +197,7 @@ export function CustomerProfilePage() {
                       )}
                     </span>
                     <span className="badge badge-outline">
-                      {entry.status === 'ACTIVE' ? translate('remaining') : entry.status}
+                      {(entry.syncStatus === 'PENDING' || entry.id.startsWith('local:')) ? translate('offlinePendingLabel') : isDebtCompleted(entry) ? translate('completed') : entry.status === 'ACTIVE' ? translate('remaining') : entry.status}
                     </span>
                   </div>
                 </div>
@@ -210,6 +207,7 @@ export function CustomerProfilePage() {
         )}
       </section>
       <ConfirmationDialog
+        icon="customers"
         cancelLabel={translate('cancel')}
         confirmLabel={translate(customer.data.archivedAt ? 'restoreCustomer' : 'archiveCustomer')}
         description={translate(

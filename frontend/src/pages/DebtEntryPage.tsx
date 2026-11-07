@@ -1,10 +1,14 @@
+import { ItemDetails } from '../components/molecules/ItemDetails'
+import { ItemNameInput } from '../components/atoms/ItemNameInput'
+import { DecimalInput } from '../components/atoms/DecimalInput'
+import { Icon } from '../components/atoms/Icon'
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useLanguage } from '../app/LanguageProvider'
 import { FeedbackState } from '../components/molecules/FeedbackState'
 import { ConfirmationDialog } from '../components/organisms/ConfirmationDialog'
-import { createTransaction, getCustomers } from '../lib/api'
+import { createTransaction, getCustomers, getItemCatalog } from '../lib/api'
 import { idempotencyKeyFor } from '../lib/idempotency'
 import type { IdempotencyAttempt } from '../lib/idempotency'
 import { formatMinorUnits, toMinorUnits } from '../lib/money'
@@ -48,6 +52,11 @@ export function DebtEntryPage() {
     queryKey: ['customers', ''],
     queryFn: () => getCustomers(),
   })
+  const catalog = useQuery({
+    queryKey: ['item-catalog'],
+    queryFn: getItemCatalog,
+    enabled: type === 'STORE_ITEMS' && entryMode === 'ITEMIZED',
+  })
   const addDebt = useMutation({
     mutationFn: async () => {
       const request =
@@ -81,6 +90,8 @@ export function DebtEntryPage() {
       setConfirmationOpen(false)
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['customers'] }),
+        queryClient.invalidateQueries({ queryKey: ['history'] }),
+        queryClient.invalidateQueries({ queryKey: ['item-catalog'] }),
         queryClient.invalidateQueries({ queryKey: ['customer-balances', customerId] }),
         queryClient.invalidateQueries({ queryKey: ['customer-transactions', customerId] }),
       ])
@@ -138,12 +149,12 @@ export function DebtEntryPage() {
         className="card border-2 border-base-300 bg-base-100 shadow-sm"
         onSubmit={(event) => {
           event.preventDefault()
-          setConfirmationOpen(true)
+          if (totalCents !== null && totalCents > 0n) setConfirmationOpen(true)
         }}
       >
         <div className="card-body gap-5 p-5 sm:p-8">
           <label className="form-control gap-2">
-            <span className="font-semibold">{translate('chooseCustomer')}</span>
+            <span className="form-section-label"><Icon className="size-5 shrink-0" name="customers" />{translate('chooseCustomer')}</span>
             <select
               className="select select-bordered w-full text-lg"
               onChange={(event) => setCustomerId(event.target.value)}
@@ -209,31 +220,23 @@ export function DebtEntryPage() {
 
           {type === 'STORE_ITEMS' && entryMode === 'ITEMIZED' ? (
             <fieldset className="grid gap-4">
-              <legend className="font-semibold">{translate('itemsTaken')}</legend>
+              <legend className="mb-3 font-semibold"><span className="form-section-label"><Icon className="size-5 shrink-0" name="store" />{translate('itemsTaken')}</span></legend>
+              {catalog.isError && <p role="alert" className="text-error">{catalog.error.message}</p>}
               {items.map((item, index) => (
                 <div className="grid gap-3 rounded-box border border-base-300 p-4 sm:grid-cols-3" key={index}>
-                  <label className="form-control gap-2 sm:col-span-3">
+                  <div className="form-control gap-2 sm:col-span-3">
                     <span className="font-semibold">{translate('itemName')}</span>
-                    <input
-                      className="input input-bordered w-full"
-                      maxLength={120}
-                      onChange={(event) =>
-                        setItems((current) =>
-                          current.map((entry, itemIndex) =>
-                            itemIndex === index ? { ...entry, itemName: event.target.value } : entry,
-                          ),
-                        )
-                      }
-                      required
-                      value={item.itemName}
-                    />
-                  </label>
+                    <ItemNameInput label={translate('itemName')} value={item.itemName} items={catalog.data ?? []}
+                      onChange={(name, price) => setItems((current) => current.map((entry, itemIndex) =>
+                        itemIndex === index ? { ...entry, itemName: name, unitPrice: price ?? catalog.data?.find((saved) => saved.itemName.toLowerCase() === name.trim().toLowerCase())?.unitPrice ?? entry.unitPrice } : entry))} />
+                  </div>
                   <label className="form-control gap-2">
                     <span className="font-semibold">{translate('quantity')}</span>
-                    <input
+                    <DecimalInput
                       className="input input-bordered w-full"
                       inputMode="decimal"
                       min="0.001"
+                      decimals={3}
                       onChange={(event) =>
                         setItems((current) =>
                           current.map((entry, itemIndex) =>
@@ -243,13 +246,12 @@ export function DebtEntryPage() {
                       }
                       required
                       step="0.001"
-                      type="number"
                       value={item.quantity}
                     />
                   </label>
                   <label className="form-control gap-2 sm:col-span-2">
                     <span className="font-semibold">{translate('unitPrice')}</span>
-                    <input
+                    <DecimalInput
                       className="input input-bordered w-full"
                       inputMode="decimal"
                       min="0"
@@ -262,19 +264,18 @@ export function DebtEntryPage() {
                       }
                       required
                       step="0.01"
-                      type="number"
                       value={item.unitPrice}
                     />
                   </label>
                   {items.length > 1 && (
                     <button
-                      className="btn btn-ghost text-error sm:col-span-3"
+                      className="btn btn-remove sm:col-span-3"
                       onClick={() =>
                         setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))
                       }
                       type="button"
                     >
-                      {translate('removeItem')}
+                      <Icon className="size-5 shrink-0" name="trash" />{translate('removeItem')}
                     </button>
                   )}
                 </div>
@@ -291,8 +292,8 @@ export function DebtEntryPage() {
             </fieldset>
           ) : (
             <label className="form-control gap-2">
-              <span className="font-semibold">{translate('amountPeso')}</span>
-              <input
+              <span className="form-section-label"><Icon className="size-5 shrink-0" name="money" />{translate('amountPeso')}</span>
+              <DecimalInput
                 autoComplete="off"
                 className="input input-bordered w-full text-2xl font-bold"
                 inputMode="decimal"
@@ -301,14 +302,13 @@ export function DebtEntryPage() {
                 placeholder="0.00"
                 required
                 step="0.01"
-                type="number"
                 value={amount}
               />
             </label>
           )}
 
           <label className="form-control gap-2">
-            <span className="font-semibold">{translate('descriptionOptional')}</span>
+            <span className="form-section-label"><Icon className="size-5 shrink-0" name="notes" />{translate('descriptionOptional')}</span>
             <textarea
               className="textarea textarea-bordered w-full"
               maxLength={500}
@@ -342,9 +342,16 @@ export function DebtEntryPage() {
         </div>
       </form>
       <ConfirmationDialog
+        icon="store"
         cancelLabel={translate('cancel')}
         confirmLabel={translate('saveDebt')}
-        description={`${translate('confirmDebtDescription')} ${selectedCustomerName} · ${categoryLabel} · ₱ ${calculatedTotal || '0.00'}.`}
+        description={translate('confirmDebtDescription')}
+        details={[
+          { label: translate('chooseCustomer'), value: selectedCustomerName, icon: 'customers' },
+          { label: translate('debtCategory'), value: categoryLabel, icon: type === 'MONEY_LOAN' ? 'money' : 'store' },
+          ...(type === 'STORE_ITEMS' && entryMode === 'ITEMIZED' ? [{ label: translate('itemsTaken'), value: <ItemDetails items={items} />, icon: 'store' as const }] : []),
+          { label: translate('debtTotal'), value: `₱ ${calculatedTotal || '0.00'}`, icon: 'money' },
+        ]}
         isConfirming={addDebt.isPending}
         onCancel={() => setConfirmationOpen(false)}
         onConfirm={() => addDebt.mutate()}

@@ -7,6 +7,7 @@ export function ConnectionStatus() {
   const { data, isPending, isError } = useQuery({
     queryKey: ['health'],
     queryFn: getHealth,
+    refetchInterval: 30_000,
   })
 
   const message = isPending
@@ -18,15 +19,18 @@ export function ConnectionStatus() {
         : translate('connectionBad')
 
   const state = isPending
-    ? 'status-warning'
+    ? 'checking'
     : isError || data?.status !== 'ok'
-      ? 'status-error'
-      : 'status-success'
+      ? 'offline'
+      : 'online'
 
   return (
-    <p aria-live="polite" className="flex items-center gap-2 text-sm text-base-content/70">
-      <span aria-hidden="true" className={`status ${state}`} />
-      {message}
-    </p>
+    <span aria-live="polite" className="connection-indicator" data-state={state} title={message}>
+      <svg aria-hidden="true" viewBox="0 0 12 28" fill="currentColor">
+        <path d="M3 0h6L8 18H4Z" />
+        <circle className="connection-indicator-dot" cx="6" cy="25" r="3" />
+      </svg>
+      <span className="sr-only">! {message}</span>
+    </span>
   )
 }

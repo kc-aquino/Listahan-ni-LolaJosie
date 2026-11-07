@@ -1,3 +1,7 @@
+import { ItemDetails } from '../components/molecules/ItemDetails'
+import { allocateAcrossDebts } from '../lib/paymentAllocation'
+import { DecimalInput } from '../components/atoms/DecimalInput'
+import { Icon } from '../components/atoms/Icon'
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -22,7 +26,8 @@ export function PaymentEntryPage() {
   const [paymentMethod, setPaymentMethod] = useState('')
   const [notes, setNotes] = useState('')
   const [confirmationOpen, setConfirmationOpen] = useState(false)
-  const [allocations, setAllocations] = useState<AllocationDraft[]>([
+  const [allocationMode, setAllocationMode] = useState<'selected' | 'all'>('selected')
+  const [manualAllocations, setAllocations] = useState<AllocationDraft[]>([
     { transactionId: '', allocatedAmount: '' },
   ])
   const attempt = useRef<IdempotencyAttempt['current']>(null)
@@ -42,6 +47,9 @@ export function PaymentEntryPage() {
         (toMinorUnits(outstandingAmount(debt.totalAmount, debt.allocations ?? [])) ?? 0n) > 0n,
     ) ?? []
   const paymentCents = toMinorUnits(amount)
+  const totalOutstanding = activeDebts.reduce((sum, debt) => sum + (toMinorUnits(outstandingAmount(debt.totalAmount, debt.allocations ?? [])) ?? 0n), 0n)
+  const automaticAllocations = allocateAcrossDebts(activeDebts, amount)
+  const allocations = allocationMode === 'all' ? automaticAllocations : manualAllocations
   const allocatedCents = allocations.reduce(
     (sum, allocation) => sum + (toMinorUnits(allocation.allocatedAmount) ?? 0n),
     0n,
@@ -52,7 +60,8 @@ export function PaymentEntryPage() {
     allocations.length > 0 &&
     allocations.every(
       (allocation) =>
-        Boolean(allocation.transactionId) &&
+        activeDebts.some((debt) => debt.id === allocation.transactionId &&
+          (toMinorUnits(allocation.allocatedAmount) ?? 0n) <= (toMinorUnits(outstandingAmount(debt.totalAmount, debt.allocations ?? [])) ?? 0n)) &&
         toMinorUnits(allocation.allocatedAmount) !== null &&
         (toMinorUnits(allocation.allocatedAmount) ?? 0n) > 0n,
     ) &&
@@ -75,6 +84,7 @@ export function PaymentEntryPage() {
       setConfirmationOpen(false)
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['customers'] }),
+        queryClient.invalidateQueries({ queryKey: ['history'] }),
         queryClient.invalidateQueries({ queryKey: ['customer-balances', customerId] }),
         queryClient.invalidateQueries({ queryKey: ['customer-transactions', customerId] }),
         queryClient.invalidateQueries({ queryKey: ['customer-payments', customerId] }),
@@ -111,14 +121,16 @@ export function PaymentEntryPage() {
   const remainingCents = paymentCents === null ? null : paymentCents - allocatedCents
   const selectedCustomerName =
     customers.data.data.find((customer) => customer.id === customerId)?.name ?? ''
-  const allocationSummary = allocations
-    .map((allocation) => {
-      const debt = activeDebts.find((entry) => entry.id === allocation.transactionId)
-      if (!debt || !allocation.allocatedAmount) return null
-      return `${debt.type === 'MONEY_LOAN' ? translate('moneyDebt') : translate('goodsDebt')}: ₱ ${allocation.allocatedAmount}`
-    })
-    .filter((entry): entry is string => entry !== null)
-    .join('; ')
+  const allocationSummary = <ul className="grid gap-4">{allocations.map((allocation) => {
+    const debt = activeDebts.find((entry) => entry.id === allocation.transactionId)
+    if (!debt) return null
+    return <li key={debt.id} className="rounded-box border border-base-300 p-3">
+      <p className="font-semibold">{translate(debt.type === 'MONEY_LOAN' ? 'moneyDebt' : 'goodsDebt')}</p>
+      {debt.items.length > 0 && <div className="mt-3"><ItemDetails items={debt.items} /></div>}
+      {debt.description && <p className="mt-2">{debt.description}</p>}
+      <dl className="mt-3"><dt className="text-sm text-base-content/65">{translate('allocationAmount')}</dt><dd className="mt-1 font-bold">₱ {allocation.allocatedAmount}</dd></dl>
+    </li>
+  })}</ul>
 
   return (
     <section className="mx-auto grid w-full max-w-3xl gap-5">
@@ -136,16 +148,18 @@ export function PaymentEntryPage() {
         className="card border-2 border-base-300 bg-base-100 shadow-sm"
         onSubmit={(event) => {
           event.preventDefault()
-          setConfirmationOpen(true)
+          if (exactAllocation) setConfirmationOpen(true)
         }}
       >
         <div className="card-body gap-5 p-5 sm:p-8">
           <label className="form-control gap-2">
-            <span className="font-semibold">{translate('chooseCustomer')}</span>
+            <span className="form-section-label"><Icon className="size-5 shrink-0" name="customers" />{translate('chooseCustomer')}</span>
             <select
               className="select select-bordered w-full text-lg"
               onChange={(event) => {
                 setCustomerId(event.target.value)
+                setAmount('')
+                setAllocationMode('selected')
                 setAllocations([{ transactionId: '', allocatedAmount: '' }])
               }}
               required
@@ -177,8 +191,8 @@ export function PaymentEntryPage() {
           ) : null)}
 
           <label className="form-control gap-2">
-            <span className="font-semibold">{translate('paymentAmount')}</span>
-            <input
+            <span className="form-section-label"><Icon className="size-5 shrink-0" name="money" />{translate('paymentAmount')}</span>
+            <DecimalInput
               className="input input-bordered w-full text-2xl font-bold"
               inputMode="decimal"
               min="0.01"
@@ -186,24 +200,39 @@ export function PaymentEntryPage() {
               placeholder="0.00"
               required
               step="0.01"
-              type="number"
               value={amount}
             />
           </label>
 
+          <label className="form-control gap-2">
+            <span className="form-section-label"><Icon className="size-5" name="reports" />{translate('paymentGoesTo')}</span>
+            <select className="select select-bordered w-full" value={allocationMode} onChange={(event) => {
+              const mode = event.target.value as 'selected' | 'all'
+              setAllocationMode(mode)
+              if (mode === 'all' && !amount) setAmount(formatMinorUnits(totalOutstanding))
+            }}>
+              <option value="selected">{translate('selectedDebts')}</option>
+              <option value="all">{translate('allDebts')}</option>
+            </select>
+            {allocationMode === 'all' && <p className="text-sm text-base-content/70">{translate('allDebtsHelp')}</p>}
+          </label>
           <fieldset className="grid gap-4">
-            <legend className="font-semibold">{translate('allocatePayment')}</legend>
+            <legend className="mb-3 font-semibold"><span className="form-section-label"><Icon className="size-5 shrink-0" name="reports" />{translate('allocatePayment')}</span></legend>
             {allocations.map((allocation, index) => (
               <div className="grid gap-3 rounded-box border border-base-300 p-4 sm:grid-cols-2" key={index}>
                 <label className="form-control gap-2">
                   <span className="font-semibold">{translate('debtEntry')}</span>
                   <select
                     className="select select-bordered w-full"
+                    disabled={allocationMode === 'all'}
                     onChange={(event) =>
                       setAllocations((current) =>
                         current.map((entry, itemIndex) =>
                           itemIndex === index
-                            ? { ...entry, transactionId: event.target.value }
+                            ? { transactionId: event.target.value, allocatedAmount: (() => {
+                                const debt = activeDebts.find((debt) => debt.id === event.target.value)
+                                return debt ? outstandingAmount(debt.totalAmount, debt.allocations ?? []) : ''
+                              })() }
                             : entry,
                         ),
                       )
@@ -230,8 +259,9 @@ export function PaymentEntryPage() {
                 </label>
                 <label className="form-control gap-2">
                   <span className="font-semibold">{translate('allocationAmount')}</span>
-                  <input
+                  <DecimalInput
                     className="input input-bordered w-full"
+                    readOnly={allocationMode === 'all'}
                     inputMode="decimal"
                     min="0.01"
                     onChange={(event) =>
@@ -246,24 +276,30 @@ export function PaymentEntryPage() {
                     placeholder="0.00"
                     required
                     step="0.01"
-                    type="number"
-                    value={allocation.allocatedAmount}
+                          value={allocation.allocatedAmount}
                   />
                 </label>
-                {allocations.length > 1 && (
+                {(() => {
+                  const debt = activeDebts.find((entry) => entry.id === allocation.transactionId)
+                  return debt ? <div className="grid gap-3 sm:col-span-2">
+                    {debt.items.length > 0 && <ItemDetails items={debt.items} />}
+                    {debt.description && <div><p className="text-sm text-base-content/65">{translate('notes')}</p><p>{debt.description}</p></div>}
+                  </div> : null
+                })()}
+                {allocationMode === 'selected' && allocations.length > 1 && (
                   <button
-                    className="btn btn-ghost text-error sm:col-span-2"
+                    className="btn btn-remove sm:col-span-2"
                     onClick={() =>
                       setAllocations((current) => current.filter((_, itemIndex) => itemIndex !== index))
                     }
                     type="button"
                   >
-                    {translate('removeAllocation')}
+                    <Icon className="size-5 shrink-0" name="trash" />{translate('removeAllocation')}
                   </button>
                 )}
               </div>
             ))}
-            {allocations.length < activeDebts.length && (
+            {allocationMode === 'selected' && allocations.length < activeDebts.length && (
               <button
                 className="btn btn-outline min-h-12"
                 onClick={() =>
@@ -286,7 +322,7 @@ export function PaymentEntryPage() {
           )}
 
           <label className="form-control gap-2">
-            <span className="font-semibold">{translate('paymentMethodOptional')}</span>
+            <span className="form-section-label"><Icon className="size-5 shrink-0" name="money" />{translate('paymentMethodOptional')}</span>
             <input
               className="input input-bordered w-full"
               maxLength={40}
@@ -295,7 +331,7 @@ export function PaymentEntryPage() {
             />
           </label>
           <label className="form-control gap-2">
-            <span className="font-semibold">{translate('notes')}</span>
+            <span className="form-section-label"><Icon className="size-5 shrink-0" name="notes" />{translate('notes')}</span>
             <textarea
               className="textarea textarea-bordered w-full"
               maxLength={500}
@@ -322,9 +358,15 @@ export function PaymentEntryPage() {
         </div>
       </form>
       <ConfirmationDialog
+        icon="money"
         cancelLabel={translate('cancel')}
         confirmLabel={translate('savePayment')}
-        description={`${translate('confirmPaymentDescription')} ${selectedCustomerName} · ₱ ${amount || '0.00'} · ${allocationSummary}`}
+        description={translate('confirmPaymentDescription')}
+        details={[
+          { label: translate('chooseCustomer'), value: selectedCustomerName, icon: 'customers' },
+          { label: translate('paymentAmount'), value: `₱ ${amount || '0.00'}`, icon: 'money' },
+          { label: translate('allocatePayment'), value: allocationSummary, icon: 'reports' },
+        ]}
         isConfirming={receivePayment.isPending}
         onCancel={() => setConfirmationOpen(false)}
         onConfirm={() => receivePayment.mutate()}
@@ -338,5 +380,5 @@ export function PaymentEntryPage() {
 
 function debtLabel(debt: DebtTransaction, translate: (key: 'moneyDebt' | 'goodsDebt') => string) {
   const label = debt.type === 'MONEY_LOAN' ? translate('moneyDebt') : translate('goodsDebt')
-  return `${label} · ₱ ${outstandingAmount(debt.totalAmount, debt.allocations ?? [])}`
+  return `${(debt.syncStatus === 'PENDING' || debt.id.startsWith('local:')) ? '⏳ ' : ''}${label} — ₱ ${outstandingAmount(debt.totalAmount, debt.allocations ?? [])}`
 }

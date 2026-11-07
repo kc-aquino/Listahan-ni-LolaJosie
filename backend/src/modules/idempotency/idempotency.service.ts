@@ -62,7 +62,7 @@ export class IdempotencyService {
             where: { userId_key: { userId, key: trimmedKey } },
           });
 
-          if (existing && existing.expiresAt > new Date()) {
+          if (existing && (existing.responseStatus === 201 || existing.expiresAt > new Date())) {
             return this.readStoredResult<T>(existing, requestHash, method, path);
           }
           if (existing) {
@@ -106,7 +106,7 @@ export class IdempotencyService {
         if (error.code === 'P2002' && operationStarted) {
           throw error;
         }
-        if (existing && existing.expiresAt > new Date()) {
+        if (existing && (existing.responseStatus === 201 || existing.expiresAt > new Date())) {
           return this.readStoredResult<T>(existing, requestHash, method, path);
         }
 

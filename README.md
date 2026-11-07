@@ -73,9 +73,28 @@ npm run dev
 
 The Vite development server proxies `/api` requests to the backend on port 3000.
 
+## Hosting
+
+Deploy this repository as one Vercel services project from the repository root.
+`frontend` serves the app and `backend` serves `/api`; Neon hosts PostgreSQL.
+See [deployment instructions](./docs/deployment.md) for environment and release checks.
+
 ## Planning documents
 
 - [Requirements](./docs/requirements.md)
 - [Database design](./docs/database-design.md)
 - [Development roadmap](./docs/development-roadmap.md)
 - [Deployment preparation](./docs/deployment.md)
+
+## Neon object storage
+
+Storage uses the root AWS SDK dependencies and loads `backend/.env` explicitly.
+Set `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, and the real
+`AWS_SECRET_ACCESS_KEY` from the credential for your Neon branch. Optionally set
+`AWS_S3_BUCKET` (defaults to `assets`). Keep these values server-side.
+
+From the repository root run `npm run storage:check` for a read-only bucket check.
+The backend dependencies must also be installed because this command uses its
+TypeScript runner. Import `uploadFile` from `s3-client.ts` to upload an object and
+receive a download URL valid for one hour; importing the module performs no upload.
+S3 storage configuration is separate from Prisma's PostgreSQL `DATABASE_URL`.

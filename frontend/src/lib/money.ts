@@ -26,3 +26,13 @@ export function outstandingAmount(
   )
   return formatMinorUnits(total - paid)
 }
+
+/** A valid debt is completed when posted payments cover its full balance. */
+export function isDebtCompleted(debt: {
+  status: string
+  totalAmount: string
+  allocations?: { allocatedAmount: string }[]
+}) {
+  return debt.status === 'ACTIVE' && toMinorUnits(debt.totalAmount) !== null &&
+    toMinorUnits(outstandingAmount(debt.totalAmount, debt.allocations ?? [])) === 0n
+}

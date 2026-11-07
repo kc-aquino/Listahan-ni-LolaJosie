@@ -23,7 +23,7 @@ export function BottomNavigation({ mobile = false }: BottomNavigationProps) {
           <NavLink
             aria-label={translate(item.label)}
             className={({ isActive }) =>
-              `min-h-14 gap-1 text-xs ${isActive ? 'text-primary' : ''}`
+              `min-h-14 gap-1 text-xs ${isActive ? 'active text-primary' : ''}`
             }
             end={item.end}
             key={item.to}
@@ -35,7 +35,7 @@ export function BottomNavigation({ mobile = false }: BottomNavigationProps) {
         ))}
       </>
     ) : (
-      <ul className="menu menu-horizontal gap-1 p-0">
+      <ul className="desktop-navigation">
         {navigationItems.map((item) => (
           <li key={item.to}>
             <NavLink

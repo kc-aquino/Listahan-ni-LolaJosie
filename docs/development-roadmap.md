@@ -128,11 +128,11 @@ Recommended scenario flow:
 
 ## Phase 6 — Deployment
 
-Status: Neon production database provisioned and migrated; local API-to-Neon financial e2e verification passes. Deployment configuration for Vercel/Render is prepared. Production API/frontend deployment, secure provider credentials, backup/restore verification, and device acceptance remain prerequisites.
+Status: deployed on November 08, 2026 to https://listahan-ni-lolajosie.vercel.app as one Vercel services project, with Neon PostgreSQL. Both service builds, live health, owner sign-in, authenticated customer/report reads, API authorization, and SPA routing pass. Backup/restore verification and actual-device acceptance remain pending; Phase 6 is not yet fully complete.
 
 - configure production environment variables
-- deploy frontend to Vercel
-- deploy backend to Render
+- deployed frontend to Vercel
+- deployed backend as the NestJS service in the same Vercel project
 - provision managed PostgreSQL
 - enable HTTPS
 - configure backups

@@ -87,6 +87,21 @@ describe('IdempotencyService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('replays a completed offline write even after the old 24-hour expiry', async () => {
+    const operation = vi.fn().mockResolvedValue({ id: 'saved-debt' });
+    const request = { amount: '40.00' };
+    await service.execute('owner-id', 'offline-key', 'POST', '/transactions', request, operation);
+    idempotencyRecord.findUnique.mockResolvedValue({
+      ...idempotencyRecord.create.mock.calls[0][0].data,
+      ...idempotencyRecord.update.mock.calls[0][0].data,
+      expiresAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    });
+    const retry = vi.fn();
+    await expect(service.execute('owner-id', 'offline-key', 'POST', '/transactions', request, retry)).resolves.toEqual({ id: 'saved-debt' });
+    expect(retry).not.toHaveBeenCalled();
+    expect(idempotencyRecord.delete).not.toHaveBeenCalled();
+  });
+
   it('requires a valid idempotency key', async () => {
     await expect(
       service.execute('owner-id', ' ', 'POST', '/transactions', {}, vi.fn()),

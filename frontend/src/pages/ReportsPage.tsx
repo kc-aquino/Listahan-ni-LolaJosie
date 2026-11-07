@@ -1,3 +1,5 @@
+import { DateInput } from '../components/atoms/DateInput'
+import { formatDate } from '../lib/date'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
@@ -104,7 +106,7 @@ export function ReportsPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="form-control gap-2">
               <span className="font-semibold">{translate('from')}</span>
-              <input
+              <DateInput
                 className="input input-bordered w-full"
                 max={granularity === 'day' ? dayTo : monthTo}
                 onChange={(event) =>
@@ -118,7 +120,7 @@ export function ReportsPage() {
             </label>
             <label className="form-control gap-2">
               <span className="font-semibold">{translate('to')}</span>
-              <input
+              <DateInput
                 className="input input-bordered w-full"
                 min={granularity === 'day' ? dayFrom : monthFrom}
                 onChange={(event) =>
@@ -148,9 +150,9 @@ export function ReportsPage() {
       ) : (
         <ul className="grid gap-3">
           {periodQuery.data.data.map((period) => (
-            <li className="card border-2 border-base-300 bg-base-100 shadow-sm" key={period.period}>
+            <li className="card border-2 border-base-300 bg-base-100 shadow-sm" key={formatDate(period.period, granularity === 'month')}>
               <div className="card-body gap-4 p-5">
-                <h2 className="text-xl font-bold">{period.period}</h2>
+                <h2 className="text-xl font-bold">{formatDate(period.period, granularity === 'month')}</h2>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <MeasureCard label={translate('debtAdded')} value={period.debtAdded.combined} />
                   <MeasureCard
@@ -275,11 +277,12 @@ function CategoryBreakdown({
   translate: (key: 'moneyDebt' | 'goodsDebt') => string
 }) {
   return (
-    <p className="rounded-box bg-base-200 p-3">
-      <span className="font-bold">{label}</span>
-      <span className="mt-1 block">
-        {translate('moneyDebt')}: ₱ {money} · {translate('goodsDebt')}: ₱ {goods}
-      </span>
-    </p>
+    <div className="rounded-box bg-base-200 p-3">
+      <p className="font-bold">{label}</p>
+      <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div><dt className="text-sm text-base-content/70">{translate('moneyDebt')}</dt><dd className="mt-1 font-semibold">₱ {money}</dd></div>
+        <div><dt className="text-sm text-base-content/70">{translate('goodsDebt')}</dt><dd className="mt-1 font-semibold">₱ {goods}</dd></div>
+      </dl>
+    </div>
   )
 }

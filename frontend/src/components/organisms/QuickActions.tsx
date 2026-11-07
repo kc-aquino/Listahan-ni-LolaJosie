@@ -6,7 +6,7 @@ export function QuickActions() {
   const { translate } = useLanguage()
 
   return (
-    <section aria-labelledby="quick-actions-title" className="space-y-4">
+    <section aria-labelledby="quick-actions-title" className="quick-actions-panel space-y-4">
       <div>
         <p className="section-kicker">
           {translate('quickActionsEyebrow')}

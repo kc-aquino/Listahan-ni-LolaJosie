@@ -5,7 +5,10 @@ import { LanguageProvider } from './LanguageProvider'
 
 const queryClient = new QueryClient({
   defaultOptions: {
+    mutations: { networkMode: 'always', retry: false },
     queries: {
+      networkMode: 'always',
+      refetchOnReconnect: 'always',
       retry: 1,
       refetchOnWindowFocus: false,
     },

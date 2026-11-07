@@ -7,14 +7,12 @@ export function WelcomePanel() {
   return (
     <section className="welcome-card">
       <div className="welcome-copy grid">
-        <p className="welcome-eyebrow">LISTAHAN NI LOLA JOSIE</p>
         <h1 className="welcome-title">
-          {translate('welcomeTitle')}
+          {translate('welcomeTitle').replace(/!$/, '')}<ConnectionStatus />
         </h1>
         <p className="welcome-description">
           {translate('welcomeDescription')}
         </p>
-        <ConnectionStatus />
       </div>
     </section>
   )

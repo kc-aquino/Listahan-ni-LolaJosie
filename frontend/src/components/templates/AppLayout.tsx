@@ -9,7 +9,7 @@ export function AppLayout() {
   return (
     <div className="app-background min-h-screen" data-theme="lola">
       <AppHeader />
-      <main className="mx-auto grid w-full max-w-6xl gap-7 px-4 pt-5 pb-28 sm:px-6 sm:pt-7 md:gap-9 md:pt-9 md:pb-28 lg:px-8 lg:pb-9">
+      <main className="app-main mx-auto grid w-full gap-7 px-4 pt-5 pb-28 sm:px-6 sm:pt-7 md:gap-9 md:pt-9 md:pb-28 lg:px-8 lg:pb-9">
         <Outlet />
       </main>
       <nav

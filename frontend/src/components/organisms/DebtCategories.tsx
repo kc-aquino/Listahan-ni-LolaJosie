@@ -54,7 +54,7 @@ export function DebtCategories() {
               </div>
             </article>
             {categories.map((category) => (
-              <article className="category-card card" key={category.title}>
+              <article className={`category-card card ${category.title === 'goodsDebt' ? 'category-card--goods' : ''}`} key={category.title}>
                 <div className="card-body flex-row items-center gap-3 p-4 sm:p-5">
                   <span aria-hidden="true" className="category-marker text-xl font-bold">
                     {'marker' in category ? (
@@ -76,7 +76,7 @@ export function DebtCategories() {
               </article>
             ))}
           </div>
-          <p className="text-base text-base-content/75">{translate('separateNote')}</p>
+          <p className="ledger-note">{translate('separateNote')}</p>
         </>
       )}
     </section>

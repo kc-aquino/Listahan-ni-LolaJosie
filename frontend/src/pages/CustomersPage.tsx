@@ -112,7 +112,7 @@ export function CustomersPage() {
       )}
 
       <form
-        className="join w-full"
+        className="customer-search join w-full"
         onSubmit={(event) => {
           event.preventDefault()
           setSearch(searchText.trim())
@@ -133,7 +133,7 @@ export function CustomersPage() {
       <label className="flex min-h-12 cursor-pointer items-center gap-3 text-base font-semibold">
         <input
           checked={includeArchived}
-          className="toggle toggle-primary"
+          className="archived-customers-checkbox"
           onChange={(event) => setIncludeArchived(event.target.checked)}
           type="checkbox"
         />
@@ -172,7 +172,7 @@ export function CustomersPage() {
                     {customer.name.trim().charAt(0).toUpperCase()}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-lg font-bold">{customer.name}</span>
+                    <span className="block break-words text-lg font-bold">{customer.name}</span>
                     {customer.archivedAt && (
                       <span className="badge badge-warning mt-1">{translate('archived')}</span>
                     )}

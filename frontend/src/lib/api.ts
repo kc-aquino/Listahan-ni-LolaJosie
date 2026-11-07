@@ -1,3 +1,5 @@
+import { enqueueEntry, localResponse, offlineIdentity, rememberResponse, syncOfflineLedger } from './offline'
+import type { DebtInput, PaymentInput } from './offlineModel'
 export type HealthResponse = {
   status: 'ok'
 }
@@ -35,6 +37,7 @@ export type TransactionItem = {
 }
 
 export type DebtTransaction = {
+  syncStatus?: 'PENDING'
   id: string
   customerId: string
   type: 'MONEY_LOAN' | 'STORE_ITEMS'
@@ -56,6 +59,7 @@ export type CustomerBalances = {
 }
 
 export type CustomerPayment = {
+  syncStatus?: 'PENDING'
   id: string
   amount: string
   paymentMethod: string | null
@@ -120,24 +124,44 @@ export class ApiError extends Error {
   }
 }
 
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL?.trim() || '/api').replace(/\/+$/, '')
+// The browser calls the public same-origin route; Vercel selects the API service.
+const apiBaseUrl = '/api'
 
 async function request<T>(
   path: string,
   options: RequestInit & { authenticated?: boolean } = {},
 ): Promise<T> {
   const { authenticated = true, ...init } = options
+  const identityAtStart = authenticated ? offlineIdentity() : null
+  const isRead = !init.method || init.method === 'GET'
+  const offline = typeof navigator !== 'undefined' && navigator.onLine === false
+  if (authenticated && isRead) {
+    const local = await localResponse(path, offline)
+    if (local !== undefined) return local as T
+  }
+  if (offline) throw new ApiError('This action needs a connection or a saved offline copy. Connect once to prepare this device.', 0)
   const headers = new Headers(init.headers)
   if (init.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
-  const token = authenticated ? window.sessionStorage.getItem('lista-ni-lola-token') : null
+  const token = authenticated ? (window.localStorage?.getItem('lista-ni-lola-token') ?? window.sessionStorage.getItem('lista-ni-lola-token')) : null
   if (token) {
     headers.set('Authorization', `Bearer ${token}`)
   }
 
-  const response = await fetch(`${apiBaseUrl}${path}`, { ...init, headers })
+  let response: Response
+  try { response = await fetch(`${apiBaseUrl}${path}`, { ...init, headers }) }
+  catch (error) {
+    if (authenticated && isRead) {
+      const local = await localResponse(path, true)
+      if (local !== undefined) return local as T
+    }
+    throw error
+  }
 
+  if (authenticated && identityAtStart && offlineIdentity()?.token !== identityAtStart.token) {
+    throw new ApiError('The session changed while loading. Please load this page again.', 401)
+  }
   if (!response.ok) {
     if (response.status === 401 && authenticated) {
       window.dispatchEvent(new Event('lista-ni-lola:unauthorized'))
@@ -156,7 +180,10 @@ async function request<T>(
     throw new ApiError(message, response.status)
   }
 
-  return (await response.json()) as T
+  const value = (await response.json()) as T
+  if (authenticated && isRead) void rememberResponse(path, value).catch(() => {})
+  if (authenticated && !isRead) void syncOfflineLedger().catch(() => {})
+  return value
 }
 
 export function getHealth() {
@@ -171,14 +198,36 @@ export function login(username: string, password: string) {
   })
 }
 
+async function requestAll<T>(path: string): Promise<Paginated<T>> {
+  const separator = path.includes('?') ? '&' : '?'
+  const first = await request<Paginated<T>>(`${path}${separator}page=1&pageSize=100`)
+  const data = [...first.data]
+  for (let page = 2; page <= first.pagination.totalPages; page++) {
+    const next = await request<Paginated<T>>(`${path}${separator}page=${page}&pageSize=100`)
+    data.push(...next.data)
+  }
+  return { data, pagination: { ...first.pagination, page: 1, pageSize: data.length, totalPages: 1 } }
+}
+
+export async function getItemCatalog() {
+  const customers = await getCustomers('', true)
+  const records = await Promise.all(customers.data.map((customer) => getCustomerTransactions(customer.id)))
+  const latest = new Map<string, { itemName: string; unitPrice: string }>()
+  records.flatMap((record) => record.data)
+    .filter((debt) => debt.status === 'ACTIVE')
+    .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))
+    .forEach((debt) => debt.items.forEach((item) => latest.set(item.itemName.trim().toLowerCase(), {
+      itemName: item.itemName, unitPrice: item.unitPrice,
+    })))
+  return [...latest.values()].sort((a, b) => a.itemName.localeCompare(b.itemName))
+}
+
 export function getCustomers(q = '', includeArchived = false) {
   const params = new URLSearchParams({
-    page: '1',
-    pageSize: '100',
     includeArchived: String(includeArchived),
   })
   if (q.trim()) params.set('q', q.trim())
-  return request<Paginated<Customer>>(`/customers?${params}`)
+  return requestAll<Customer>(`/customers?${params}`)
 }
 
 export function createCustomer(input: {
@@ -197,10 +246,9 @@ export function createTransaction(
   input: Record<string, unknown>,
   idempotencyKey: string,
 ) {
-  return request<DebtTransaction>(`/customers/${customerId}/transactions`, {
-    method: 'POST',
-    headers: { 'Idempotency-Key': idempotencyKey },
-    body: JSON.stringify(input),
+  return enqueueEntry(customerId, 'debt', input as DebtInput, idempotencyKey).then((result) => {
+    window.dispatchEvent(new Event('lista:sync-request'))
+    return result as DebtTransaction
   })
 }
 
@@ -222,10 +270,9 @@ export function createPayment(
   },
   idempotencyKey: string,
 ) {
-  return request(`/customers/${customerId}/payments`, {
-    method: 'POST',
-    headers: { 'Idempotency-Key': idempotencyKey },
-    body: JSON.stringify(input),
+  return enqueueEntry(customerId, 'payment', input as PaymentInput, idempotencyKey).then((result) => {
+    window.dispatchEvent(new Event('lista:sync-request'))
+    return result
   })
 }
 
@@ -254,14 +301,14 @@ export function getCustomerBalances(customerId: string) {
 }
 
 export function getCustomerTransactions(customerId: string) {
-  return request<Paginated<DebtTransaction>>(
-    `/customers/${customerId}/transactions?page=1&pageSize=100`,
+  return requestAll<DebtTransaction>(
+    `/customers/${customerId}/transactions`,
   )
 }
 
 export function getCustomerPayments(customerId: string) {
-  return request<Paginated<CustomerPayment>>(
-    `/customers/${customerId}/payments?page=1&pageSize=100`,
+  return requestAll<CustomerPayment>(
+    `/customers/${customerId}/payments`,
   )
 }
 
