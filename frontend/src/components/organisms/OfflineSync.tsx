@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
+import { Icon } from '../atoms/Icon'
+import { createContext, useContext, useEffect, useId, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../app/AuthProvider'
 import { useLanguage } from '../../app/LanguageProvider'
@@ -10,14 +12,16 @@ import { draftDebt } from '../../lib/offlineModel'
 import { formatDate } from '../../lib/date'
 import { ConfirmationDialog } from './ConfirmationDialog'
 
-export function OfflineSync() {
+type SyncState = { state: OfflineState; syncing: boolean; error: string; setError: (value: string) => void }
+const SyncContext = createContext<SyncState | null>(null)
+
+export function OfflineSync({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const { translate } = useLanguage()
   const client = useQueryClient()
   const [state, setState] = useState<OfflineState>(emptyState)
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState('')
-  const [remove, setRemove] = useState<string | null>(null)
   useEffect(() => {
     setState(emptyState()); setError('')
     if (!user) return
@@ -66,8 +70,36 @@ export function OfflineSync() {
     }
   }, [user?.id, client])
 
-  if (!user) return null
-  return <aside className="mx-auto my-3 grid w-[calc(100%-2rem)] max-w-6xl gap-3 rounded-box border border-base-300 bg-base-100 p-4" data-theme="lola" aria-label={translate('offlineDeviceData')}>
+  return <SyncContext.Provider value={{ state, syncing, error, setError }}>{children}</SyncContext.Provider>
+}
+
+export function OfflineSyncButton() {
+  const context = useContext(SyncContext)
+  const { translate } = useLanguage()
+  const client = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const [remove, setRemove] = useState<string | null>(null)
+  const dialog = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
+  useEffect(() => {
+    if (open && !dialog.current?.open) dialog.current?.showModal()
+    else if (!open && dialog.current?.open) dialog.current?.close()
+  }, [open])
+  if (!context) return null
+  const { state, syncing, error, setError } = context
+  return <>
+    <button type="button" className="btn btn-outline relative shrink-0" title={translate('offlineSyncNow')} aria-label={translate('offlineSyncNow')} aria-haspopup="dialog" onClick={() => setOpen(true)}>
+      <Icon name="sync" className={`size-6 ${syncing ? 'animate-spin motion-reduce:animate-none' : ''}`} />
+      {state.entries.length > 0 && <span className="badge badge-primary absolute -right-2 -top-2">{state.entries.length}</span>}
+      {error && !state.entries.length && <span aria-hidden="true" className="absolute right-1 top-1 size-2 rounded-full bg-error" />}
+    </button>
+    <dialog ref={dialog} className="modal" aria-labelledby={titleId} onCancel={() => setOpen(false)} onClick={(event) => { if (event.target === event.currentTarget) setOpen(false) }}>
+      <div className="modal-box grid gap-4 bg-base-100 p-5 sm:p-7" data-theme="lola">
+        <header className="flex items-center justify-between gap-3 border-b border-base-300 pb-3">
+          <h2 id={titleId} className="form-section-label text-xl font-bold"><Icon name="sync" className="size-6" />{translate('offlineDeviceData')}</h2>
+          <button type="button" className="btn btn-ghost" aria-label={translate('close')} onClick={() => setOpen(false)}>✕</button>
+        </header>
+
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div aria-live="polite">
         <p className="font-semibold">{syncing ? translate('offlineSyncing') : state.entries.length ? `${state.entries.length} ${translate('offlinePending')}` : state.snapshot ? translate('offlineReady') : translate('offlinePreparing')}</p>
@@ -89,10 +121,12 @@ export function OfflineSync() {
         {!entry.receipt && (!entry.attempted || entry.rejected) && <button type="button" className="btn btn-remove" disabled={syncing} onClick={() => setRemove(entry.id)}>{translate('offlineRemove')}</button>}
       </li>)}</ul>
     </details>}
+      </div>
+    </dialog>
     <ConfirmationDialog open={remove !== null} title={translate('offlineRemove')} description={translate('offlineRemoveDescription')} confirmLabel={translate('offlineRemove')} cancelLabel={translate('cancel')} pendingLabel={translate('saving')} isConfirming={false}
       onCancel={() => setRemove(null)} onConfirm={() => {
         if (!remove) return
         void discardEntry(remove).then(async () => { setRemove(null); await client.invalidateQueries() }).catch((err: Error) => { setRemove(null); setError(err.message) })
       }} />
-  </aside>
+  </>
 }

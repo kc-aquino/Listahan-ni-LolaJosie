@@ -1,4 +1,4 @@
-import { enqueueEntry, localResponse, offlineIdentity, rememberResponse, syncOfflineLedger } from './offline'
+import { localResponse, offlineIdentity, rememberResponse, saveLedgerEntry, syncOfflineLedger } from './offline'
 import type { DebtInput, PaymentInput } from './offlineModel'
 export type HealthResponse = {
   status: 'ok'
@@ -246,10 +246,7 @@ export function createTransaction(
   input: Record<string, unknown>,
   idempotencyKey: string,
 ) {
-  return enqueueEntry(customerId, 'debt', input as DebtInput, idempotencyKey).then((result) => {
-    window.dispatchEvent(new Event('lista:sync-request'))
-    return result as DebtTransaction
-  })
+  return saveLedgerEntry(customerId, 'debt', input as DebtInput, idempotencyKey) as Promise<DebtTransaction>
 }
 
 export function voidTransaction(transactionId: string) {
@@ -270,10 +267,7 @@ export function createPayment(
   },
   idempotencyKey: string,
 ) {
-  return enqueueEntry(customerId, 'payment', input as PaymentInput, idempotencyKey).then((result) => {
-    window.dispatchEvent(new Event('lista:sync-request'))
-    return result
-  })
+  return saveLedgerEntry(customerId, 'payment', input as PaymentInput, idempotencyKey)
 }
 
 export function voidPayment(paymentId: string) {

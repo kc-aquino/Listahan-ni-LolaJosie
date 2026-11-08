@@ -167,3 +167,49 @@ export async function discardEntry(id: string) {
     state.entries = state.entries.filter((entry) => entry.id !== id)
   })
 }
+
+
+// Online writes use the API normally. Only disconnected/uncertain deliveries
+// enter the durable outbox, preserving the exact payload and key for replay.
+const preparedWrites = new Map<string, DebtInput | PaymentInput>()
+export async function saveLedgerEntry(customerId: string, kind: 'debt' | 'payment', input: DebtInput | PaymentInput, key: string) {
+  const identity = offlineIdentity()
+  if (!identity) throw new Error('Sign in before saving records.')
+  const fingerprint = `${identity.userId}:${key}`
+  let body = preparedWrites.get(fingerprint)
+  if (!body) {
+    body = structuredClone(input)
+    const timestamp = new Date().toISOString()
+    if (kind === 'debt') (body as DebtInput).occurredAt ??= timestamp
+    else (body as PaymentInput).paidAt ??= timestamp
+    preparedWrites.set(fingerprint, body)
+  }
+  const queue = async () => {
+    const result = await enqueueEntry(customerId, kind, body!, key)
+    window.dispatchEvent(new Event('lista:sync-request'))
+    return result
+  }
+  if (!navigator.onLine) return queue()
+  try {
+    const hasPending = typeof indexedDB !== 'undefined' && await readOfflineState(identity.userId).then((state) => state.entries.length > 0).catch(() => false)
+    if (hasPending) await syncOfflineLedger()
+    if (kind === 'payment' && typeof indexedDB !== 'undefined') {
+      const state = await readOfflineState(identity.userId).catch(() => null)
+      body = { ...body as PaymentInput, allocations: (body as PaymentInput).allocations.map((allocation) => ({ ...allocation, transactionId: state?.mappings[allocation.transactionId] ?? allocation.transactionId })) }
+      preparedWrites.set(fingerprint, body)
+    }
+    const result = await remote<DebtTransaction | CustomerPayment>(`/customers/${customerId}/${kind === 'debt' ? 'transactions' : 'payments'}`, identity.token, {
+      method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify(body),
+    })
+    // Refresh the offline copy after any snapshot refresh already in flight.
+    const previous = running.get(identity.userId)
+    if (previous) void previous.catch(() => {}).then(() => syncOfflineLedger()).catch(() => {})
+    else void syncOfflineLedger().catch(() => {})
+    return result
+  } catch (error) {
+    if (error instanceof SyncError && error.status === 401) window.dispatchEvent(new Event('lista-ni-lola:unauthorized'))
+    const uncertain = error instanceof TypeError || error instanceof SyntaxError || (error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name)) || (error instanceof SyncError && (error.status >= 500 || [408, 429].includes(error.status)))
+    if (uncertain || !navigator.onLine) return queue()
+    throw error
+  }
+}

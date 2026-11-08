@@ -3,6 +3,7 @@ import type { PropsWithChildren } from 'react'
 
 const translations = {
   en: {
+    close: 'Close',
     offlineDeviceData: 'Saved on this device',
     offlineReady: 'Records available offline',
     offlinePreparing: 'Preparing records for offline use…',
@@ -189,6 +190,7 @@ const translations = {
     mobileNavigation: 'Mobile navigation',
   },
   tl: {
+    close: 'Isara',
     offlineDeviceData: 'Naka-save sa device na ito',
     offlineReady: 'Puwedeng gamitin offline ang mga record',
     offlinePreparing: 'Inihahanda ang mga record para sa offline…',

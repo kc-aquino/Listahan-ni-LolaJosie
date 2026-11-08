@@ -140,3 +140,16 @@ API health, and browser page loading. Both database-backed financial e2e tests
 passed after the delayed-idempotency change. Offline persistence/retry/conflict
 cases were exercised with IndexedDB emulation; actual phone installation and
 Wi-Fi-toggle acceptance still need to be checked on Lola's device.
+
+## Online-first saving and History sync controls
+
+Sync status and manual controls are in a modal opened from the icon beside the
+History heading. The global sync provider is headless: reconnect synchronization
+continues on all screens even when the modal is closed.
+
+Connected debt/payment saves now wait for the API response and return the server
+record directly. Only offline writes or uncertain network deliveries enter the
+local outbox. Online validation errors are shown immediately. Fixed request
+bodies/timestamps and idempotency keys are preserved on fallback. Reconnect sync
+submits pending entries and refreshes the local snapshot from current server data;
+it never replaces the server ledger with an old device snapshot.

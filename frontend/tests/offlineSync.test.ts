@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto'
 import assert from 'node:assert/strict'
 import { beforeEach, test } from 'node:test'
 import { changeOfflineState, readOfflineState } from '../src/lib/offlineStore'
-import { discardEntry, enqueueEntry, localResponse, syncOfflineLedger } from '../src/lib/offline'
+import { discardEntry, enqueueEntry, localResponse, saveLedgerEntry, syncOfflineLedger } from '../src/lib/offline'
 import { emptyState, ledgerBalances, projectLedger } from '../src/lib/offlineModel'
 import type { LedgerSnapshot, PaymentInput } from '../src/lib/offlineModel'
 import type { Customer, DebtTransaction } from '../src/lib/api'
@@ -134,4 +134,60 @@ test('acknowledged writes are not resent if refreshing the snapshot fails', asyn
   assert.equal(posts, 1)
   assert.equal(saved.entries.length, 0)
   assert.equal(ledgerBalances(projectLedger(saved).debts).combined, '115.00')
+})
+
+
+test('connected saves go directly to the server without creating pending entries', async () => {
+  online = true
+  let posts = 0
+  globalThis.fetch = async (input, init) => {
+    if (init?.method === 'POST') { posts++; return json({ ...debt, id: 'online-server-id', totalAmount: '25.00' }) }
+    const path = String(input)
+    if (path.startsWith('/api/customers?')) return json(page([customer]))
+    if (path.includes('/transactions?')) return json(page([debt]))
+    return json(page([]))
+  }
+  const result = await saveLedgerEntry('customer', 'debt', { type: 'MONEY_LOAN', totalAmount: '25.00' }, 'direct-online')
+  assert.equal(result.id, 'online-server-id')
+  assert.equal((await readOfflineState('owner')).entries.length, 0)
+  await syncOfflineLedger()
+  assert.equal(posts, 1)
+})
+
+test('a failed online delivery becomes a local entry with the exact original timestamp and key', async () => {
+  online = true
+  let sent: Record<string, unknown> = {}
+  globalThis.fetch = async (_input, init) => { sent = JSON.parse(String(init?.body)); throw new TypeError('Connection dropped') }
+  const result = await saveLedgerEntry('customer', 'debt', { type: 'MONEY_LOAN', totalAmount: '30.00' }, 'dropped-online')
+  assert.equal(result.id, 'local:dropped-online')
+  const saved = await readOfflineState('owner')
+  assert.equal(saved.entries.length, 1)
+  assert.equal(saved.entries[0].key, 'dropped-online')
+  assert.deepEqual(saved.entries[0].body, sent)
+})
+
+test('online validation errors are shown immediately rather than queued', async () => {
+  online = true
+  globalThis.fetch = async () => json({ message: 'Customer is archived.' }, 409)
+  await assert.rejects(saveLedgerEntry('customer', 'debt', { type: 'MONEY_LOAN', totalAmount: '30.00' }, 'rejected-online'), /Customer is archived/)
+  assert.equal((await readOfflineState('owner')).entries.length, 0)
+})
+
+
+test('online payments resolve a debt ID that was created offline and has since synced', async () => {
+  await changeOfflineState('owner', (state) => { state.mappings['local:already-synced'] = 'existing' })
+  online = true
+  globalThis.fetch = async (input, init) => {
+    if (init?.method === 'POST') {
+      const body = JSON.parse(String(init.body))
+      assert.equal(body.allocations[0].transactionId, 'existing')
+      return json({ id: 'online-payment' })
+    }
+    const path = String(input)
+    if (path.startsWith('/api/customers?')) return json(page([customer]))
+    return json(page([]))
+  }
+  const result = await saveLedgerEntry('customer', 'payment', { amount: '5.00', allocations: [{ transactionId: 'local:already-synced', allocatedAmount: '5.00' }] }, 'mapped-online-payment')
+  assert.equal(result.id, 'online-payment')
+  await syncOfflineLedger()
 })

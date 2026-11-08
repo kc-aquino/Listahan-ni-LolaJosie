@@ -10,8 +10,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AppProviders>
       <PwaSupport />
-      <OfflineSync />
-      <App />
+      <OfflineSync><App /></OfflineSync>
     </AppProviders>
   </React.StrictMode>,
 )

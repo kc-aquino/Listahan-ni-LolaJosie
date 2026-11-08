@@ -1,3 +1,4 @@
+import { OfflineSyncButton } from '../components/organisms/OfflineSync'
 import { DateInput } from '../components/atoms/DateInput'
 import { formatDate } from '../lib/date'
 import type { ReactNode } from 'react'
@@ -164,11 +165,14 @@ export function HistoryPage() {
 
   return (
     <section className="grid gap-5">
-      <header>
+      <header className="flex items-center justify-between gap-3">
+        <div>
         <p className="section-kicker text-xs font-bold tracking-[0.16em]">
           {translate('historyEyebrow')}
         </p>
         <h1 className="mt-2 text-3xl font-bold">{translate('pageTitleHistory')}</h1>
+        </div>
+        <OfflineSyncButton />
       </header>
 
       <div className="flex items-end gap-3">
