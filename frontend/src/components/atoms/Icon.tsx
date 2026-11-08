@@ -1,6 +1,8 @@
 import type { ReactNode, SVGProps } from 'react'
 
 export type IconName =
+  | 'eye'
+  | 'eyeOff'
   | 'sync'
   | 'calendar'
   | 'money'
@@ -22,6 +24,8 @@ type IconProps = SVGProps<SVGSVGElement> & {
 }
 
 const iconPaths: Record<IconName, ReactNode> = {
+  eye: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></>,
+  eyeOff: <><path d="m3 3 18 18M10.6 5.1A12 12 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-3.1 4.1M6.2 6.2A20 20 0 0 0 2 12s3.5 7 10 7a12 12 0 0 0 5.8-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2" /></>,
   sync: <><path d="M20 7v5h-5M4 17v-5h5" /><path d="M6 7a7 7 0 0 1 11-2l3 3M4 16l3 3a7 7 0 0 0 11-2" /></>,
   calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M7 3v4m10-4v4M3 11h18m-14 4h2m3 0h2" /></>,
   money: <><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="12" cy="12" r="3" /><path d="M6 9h1m10 6h1" /></>,

@@ -3,6 +3,8 @@ import type { PropsWithChildren } from 'react'
 
 const translations = {
   en: {
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
     close: 'Close',
     offlineDeviceData: 'Saved on this device',
     offlineReady: 'Records available offline',
@@ -67,7 +69,7 @@ const translations = {
     pageTitleReceivePayment: 'Record a payment',
     loginTitle: 'Welcome back',
     loginIntroTitle: 'A little easier, every day.',
-    loginDescription: 'Sign in to manage your customer and store records.',
+    loginDescription: 'Sign in to your store ledger.',
     username: 'Username',
     password: 'Password',
     signIn: 'Sign in',
@@ -190,6 +192,8 @@ const translations = {
     mobileNavigation: 'Mobile navigation',
   },
   tl: {
+    showPassword: 'Ipakita ang password',
+    hidePassword: 'Itago ang password',
     close: 'Isara',
     offlineDeviceData: 'Naka-save sa device na ito',
     offlineReady: 'Puwedeng gamitin offline ang mga record',
@@ -255,7 +259,7 @@ const translations = {
     pageTitleReceivePayment: 'Mag-record ng bayad',
     loginTitle: 'Welcome back!',
     loginIntroTitle: 'Mas magaan ang bawat araw.',
-    loginDescription: 'Mag-sign in para makita at ma-update ang listahan ng utang.',
+    loginDescription: 'Mag-sign in sa iyong listahan.',
     username: 'Username',
     password: 'Password',
     signIn: 'Mag-sign in',
