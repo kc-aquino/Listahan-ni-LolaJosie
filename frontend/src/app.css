@@ -249,3 +249,24 @@ legend { max-width: 100%; line-height: 1.4; }
 @media (prefers-reduced-motion: reduce) {
   .login-page { animation: none; background-position: 50% 50%; }
 }
+
+/* Sync dialog: keep its close control visible while long queues scroll. */
+.sync-modal.modal-box { display: flex; flex-direction: column; width: min(36rem, calc(100vw - 2rem)); max-width: none; max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding: 0; overflow: hidden; }
+.sync-modal-header { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 1rem 1.25rem; border-bottom: 1px solid #dfcdb7; }
+.sync-modal-title { display: flex; align-items: center; gap: 0.6rem; min-width: 0; margin: 0; font-size: 1.15rem; font-weight: 750; line-height: 1.35; overflow-wrap: anywhere; }
+.sync-modal-title svg { flex: 0 0 1.35rem; }
+.sync-modal .sync-modal-close.btn { flex: 0 0 2.75rem; width: 2.75rem; min-width: 2.75rem; height: 2.75rem; min-height: 2.75rem; padding: 0; align-self: flex-start; }
+.sync-modal-body { display: grid; gap: 1rem; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 1.25rem; }
+.sync-modal-body *, .sync-modal-status > * { min-width: 0; max-width: 100%; }
+.sync-modal-body p, .sync-modal-body time, .sync-modal-body summary { overflow-wrap: anywhere; }
+.sync-modal-status { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; align-items: start; }
+.sync-modal-status > .btn { width: 100%; }
+.sync-modal-body summary { padding-block: 0.35rem; line-height: 1.5; }
+@media (min-width: 600px) {
+  .sync-modal-status { grid-template-columns: minmax(0, 1fr) auto; }
+  .sync-modal-status > .btn { width: auto; }
+}
+@media (max-width: 359px) {
+  .sync-modal-header, .sync-modal-body { padding: 0.9rem; }
+  .sync-modal-title { font-size: 1.05rem; }
+}
